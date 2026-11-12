@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>快照测试页</title>
+<style>
+  body{font-family:sans-serif;margin:24px;max-width:720px}
+  .hidden{display:none}
+  .row{margin:10px 0}
+</style>
+</head>
+<body>
+  <h1>商品搜索 - 测试页面</h1>
+  <p>这是一个用于验证 DOM 快照能力的静态页面，包含常见控件。</p>
+  <div class="row">
+    <input type="search" name="q" placeholder="搜索商品" value="无线耳机">
+    <button id="btnSearch" onclick="document.getElementById('out').textContent='已搜索'">搜索</button>
+  </div>
+  <div class="row">
+    <label><input type="checkbox" id="onlyStock" checked> 仅看有货</label>
+    <select name="sort"><option>综合排序</option><option selected>销量优先</option><option>价格从低到高</option></select>
+  </div>
+  <form class="row">
+    <input type="text" name="user" aria-label="用户名" placeholder="请输入账号">
+    <input type="password" name="pwd" placeholder="请输入密码">
+    <button type="submit">登录</button>
+  </form>
+  <ul>
+    <li><a href="https://example.com/a/1">商品一 · 降噪蓝牙耳机 ¥299</a></li>
+    <li><a href="https://example.com/a/2">商品二 · 半入耳式耳机 ¥199</a></li>
+    <li><a href="https://example.com/a/3">商品三 · 头戴式耳机 ¥599</a></li>
+  </ul>
+  <div class="hidden"><button>这个不应该出现</button></div>
+  <div style="height:1600px"></div>
+  <p id="out">底部文本块</p>
+</body>
+</html>

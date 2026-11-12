@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>Browser Agent</title>
+  <link rel="stylesheet" href="panel.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="hdr">
+      <div class="brand">
+        <span class="logo">⚡</span>
+        <span>Browser Agent</span>
+        <span class="dot" id="dot" title="后台状态"></span>
+      </div>
+      <div class="hdr-right">
+        <select id="tabSel" title="目标标签页"></select>
+        <button id="btnReloadTabs" class="icon" title="刷新标签页列表">⟳</button>
+        <button id="btnTasks" class="icon" title="任务列表">☰</button>
+        <button id="btnDiag" class="icon" title="环境诊断（内核 / 调试器 / 权限）">◎</button>
+        <button id="btnCfg" class="icon" title="设置">⚙</button>
+      </div>
+    </header>
+
+    <div id="taskPanel" class="task-panel hidden">
+      <div class="task-head">
+        <span class="task-head-title">任务列表</span>
+        <span id="taskCount" class="task-count">0</span>
+        <button id="btnTaskClose" class="icon" title="关闭">✕</button>
+      </div>
+      <div id="taskList" class="task-list"></div>
+      <div class="task-foot">
+        <span class="task-tip">点任务可重新填入输入框</span>
+        <button id="btnTaskClear">清空全部</button>
+      </div>
+    </div>
+
+    <section id="cfgPanel" class="cfg hidden">
+      <label>接口地址<input id="cfgBase" placeholder="http://127.0.0.1:8080/v1" /></label>
+      <label>模型<input id="cfgModel" placeholder="deepseek-v4.1-flash" /></label>
+      <label>API Key<input id="cfgKey" type="password" /></label>
+      <label>最大步数（0=不限）<input id="cfgSteps" type="number" min="0" max="999" title="0 或留空 = 不限制，由 300 步安全阀兜底" /></label>
+
+      <label class="lbl-col">
+        <span class="lbl-title">系统提示词 <em>· 留空则使用内置默认</em></span>
+        <textarea id="cfgSysPrompt" rows="8" spellcheck="false" placeholder="在这里写给 Agent 的行为规则。留空 = 用内置的强化默认版。"></textarea>
+      </label>
+      <div class="cfg-row mini">
+        <button id="btnFillDefault" type="button">填入内置默认</button>
+        <button id="btnClearPrompt" type="button">清空</button>
+        <span id="promptLen" class="hint-inline"></span>
+      </div>
+
+      <label class="lbl-col">
+        <span class="lbl-title">额外提示词 <em>· 追加在系统提示词之后</em></span>
+        <textarea id="cfgExtraPrompt" rows="4" spellcheck="false" placeholder="补充规则、临时要求、特定任务的打法…留空则不追加。"></textarea>
+      </label>
+      <div class="skill-box">
+        <div class="skill-head">
+          <label class="skill-all"><input type="checkbox" id="skillAll" /> 全选</label>
+          <button id="btnInsertSkill" type="button" disabled>插入选中</button>
+          <span id="extraLen" class="hint-inline"></span>
+        </div>
+        <div id="skillList" class="skill-list"></div>
+      </div>
+
+      <div class="cfg-row">
+        <button id="btnSaveCfg" class="primary">保存</button>
+        <button id="btnTestCfg">测试连接</button>
+        <button id="btnClearChat">清空对话</button>
+      </div>
+      <div id="cfgHint" class="hint"></div>
+    </section>
+
+    <main id="log" class="log">
+      <div class="welcome">
+        <p><b>直接说人话，我来操作浏览器。</b></p>
+        <ul>
+          <li>打开 example.com，列出首页标题和所有链接</li>
+          <li>在这个页面搜索「无线耳机」，抓取前 5 个商品的名称和价格</li>
+          <li>刷新页面，把 /api/order/list 的响应 JSON 结构给我</li>
+          <li>把登录框填上账号密码并提交</li>
+        </ul>
+        <p class="tip">操作期间请关闭目标页的 F12 开发者工具（调试器互斥）。</p>
+      </div>
+    </main>
+
+    <footer class="ftr">
+      <div id="jsBar" class="js-bar hidden">
+        <textarea id="jsInput" rows="2" spellcheck="false" placeholder="直接在当前页执行 JS，不经过模型。例：document.title"></textarea>
+        <div class="js-row">
+          <button id="btnRunJs" class="primary" type="button">运行</button>
+          <button id="btnClearJsOut" type="button">清空</button>
+          <span id="jsHint" class="hint-inline"></span>
+        </div>
+        <pre id="jsOut" class="js-out hidden"></pre>
+      </div>
+      <textarea id="input" rows="3" placeholder="描述要做什么…（Ctrl+Enter 发送）"></textarea>
+      <div class="ftr-row">
+        <button id="btnSend" class="primary">执行</button>
+        <button id="btnStop" disabled>停止</button>
+        <button id="btnJs" type="button" title="直接执行 JS（绕过模型）">JS</button>
+        <label class="chk"><input type="checkbox" id="chkShot" /> 附带截图</label>
+        <span id="status" class="status"></span>
+      </div>
+    </footer>
+  </div>
+  <script src="panel.js"></script>
+</body>
+</html>

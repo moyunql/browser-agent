@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Local Browser Agent (LLM in-browser operator)",
+  "version": "1.5.0",
+  "description": "用本地大模型直接操作浏览器的 Agent：DOM 操控 / 网络请求与响应体读取 / 页面内存 JS 执行 / Cookie。基于 CDP，无需外置自动化工具。",
+  "minimum_chrome_version": "100",
+  "permissions": [
+    "debugger",
+    "tabs",
+    "scripting",
+    "storage",
+    "activeTab",
+    "cookies",
+    "clipboardWrite",
+    "downloads",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "打开 Browser Agent",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  }
+}
