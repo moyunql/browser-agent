@@ -191,7 +191,11 @@ function isTextFile(f) {
  * ============================================================ */
 function detectStack(files) {
   const has = (name) => files.some((f) => f.rel === name || f.rel.endsWith('/' + name));
-  const exts = new Set(files.map((f) => f.ext));
+
+  // 浏览器扩展：manifest + background/panel/content 脚本
+  if (has('manifest.json') && files.some((f) => /(?:^|\/)(?:background|panel|content|popup)\.[jt]s$/.test(f.rel))) {
+    return '浏览器扩展 (MV3)';
+  }
 
   if (has('package.json')) {
     if (has('next.config.js') || has('next.config.mjs')) return 'Next.js';
@@ -199,11 +203,8 @@ function detectStack(files) {
     if (has('tsconfig.json')) return 'Node.js + TypeScript';
     return 'Node.js';
   }
-  if (has('requirements.txt') || has('pyproject.toml') || has('setup.py')) {
-    if (has('manage.py')) return 'Django';
-    if (has('app.py') || has('main.py')) return 'Python';
-    return 'Python';
-  }
+  if (has('manage.py')) return 'Django';
+  if (has('requirements.txt') || has('pyproject.toml') || has('setup.py')) return 'Python';
   if (has('go.mod')) return 'Go';
   if (has('Cargo.toml')) return 'Rust';
   if (has('pom.xml')) return 'Java (Maven)';
@@ -211,9 +212,28 @@ function detectStack(files) {
   if (has('composer.json')) return 'PHP';
   if (has('Gemfile')) return 'Ruby';
   if (has('pubspec.yaml')) return 'Flutter / Dart';
+
+  // 兜底：按源码文件数量占比判断，而不是"有 .py 就算 Python"
+  const LANG = {
+    '.py': 'Python', '.js': 'JavaScript', '.mjs': 'JavaScript', '.cjs': 'JavaScript',
+    '.ts': 'TypeScript', '.go': 'Go', '.rs': 'Rust', '.java': 'Java',
+    '.php': 'PHP', '.rb': 'Ruby', '.cs': 'C#', '.kt': 'Kotlin', '.swift': 'Swift',
+    '.c': 'C', '.cpp': 'C++', '.vue': 'Vue', '.svelte': 'Svelte',
+  };
+  const count = {};
+  for (const f of files) {
+    if (LANG[f.ext]) count[f.ext] = (count[f.ext] || 0) + 1;
+  }
+  let best = '';
+  let bestN = 0;
+  for (const ext of Object.keys(count)) {
+    if (count[ext] > bestN) {
+      bestN = count[ext];
+      best = LANG[ext];
+    }
+  }
+  if (best) return best;
   if (has('index.html')) return '静态站点';
-  if (exts.has('.py')) return 'Python';
-  if (exts.has('.js') || exts.has('.ts')) return 'JavaScript';
   return '通用项目';
 }
 

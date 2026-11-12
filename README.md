@@ -111,6 +111,42 @@ node lab/server.js        # http://127.0.0.1:8899
 
 > 靶场仅用于本地学习，跑在 `127.0.0.1`，不对外监听。
 
+## 上传工具 ghup
+
+仓库里带了个专门上传项目的小工具。它不只 push，**推之前先审一遍**：
+
+```bash
+node ghup.js                        # 上传当前目录
+node ghup.js ./my-project           # 指定目录
+node ghup.js ./p --repo name        # 指定仓库名
+node ghup.js ./p --private          # 建私有仓库
+node ghup.js ./p --dry-run          # 只体检，不推送
+node ghup.js ./p --allow-secrets    # 无视高危告警强行推（慎用）
+```
+
+流程七步：
+
+1. **扫描项目** — 识别类型（含浏览器扩展/MV3）、文件数、总体积
+2. **检查不该传的** — 超大文件（>90MB 会被 GitHub 拒收）、依赖目录自动跳过
+3. **敏感扫描** — key / token / 私钥 / 连接串 / 硬编码密码，**命中高危直接中止并给出文件:行号**
+4. **补齐基础文件** — 缺 `.gitignore` 按语言生成，缺 `README.md` 生成骨架
+5. **本地提交**
+6. **探测代理 + 建仓库**（仓库已存在则复用，不覆盖）
+7. **推送并清理 token**
+
+敏感规则实测（造了 6 类假凭据，全部识别）：
+
+| 类型 | 结果 |
+|---|---|
+| GitHub Token `ghp_...` | ✖ 拦截 |
+| OpenAI 风格 Key `sk-...` | ✖ 拦截 |
+| 数据库连接串（含密码） | ✖ 拦截 |
+| PEM 私钥文件 | ✖ 拦截 |
+| 硬编码 `password` / `apiKey` | ⚠ 警告 |
+| 内网 `IP:端口` | ⚠ 警告 |
+
+Token 首次输入后缓存在 `~/.ghup/config.json`（权限 600），之后自动复用；也可以用 `GITHUB_TOKEN` 环境变量覆盖。推送结束后 `.git/config` 里的 token 会被抹掉。
+
 ## 目录
 
 ```
