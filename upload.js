@@ -135,17 +135,24 @@ function git(args, extraEnv) {
   PROXY = p;
 
   // ---------- Token ----------
-  log('');
-  log('[2/6] 需要你的 GitHub Token（只需一个，用完不留在本地）');
-  log('');
-  log('  没有的话，30 秒生成一个：');
-  log('    1. 打开  https://github.com/settings/tokens/new');
-  log('    2. Note 随便写（如 upload），Expiration 选 7 days');
-  log('    3. 勾选第一个大项  [x] repo');
-  log('    4. 页面拉到最底，点  Generate token');
-  log('    5. 复制 ghp_ 开头的那串（只显示一次）');
-  log('');
-  TOKEN = await ask('  粘贴 Token 后回车: ');
+  // 优先读环境变量（CI / 脚本调用），否则交互输入
+  TOKEN = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
+  if (!TOKEN) {
+    log('');
+    log('[2/6] 需要你的 GitHub Token（只需一个，用完不留在本地）');
+    log('');
+    log('  没有的话，30 秒生成一个：');
+    log('    1. 打开  https://github.com/settings/tokens/new');
+    log('    2. Note 随便写（如 upload），Expiration 选 7 days');
+    log('    3. 勾选第一个大项  [x] repo');
+    log('    4. 页面拉到最底，点  Generate token');
+    log('    5. 复制 ghp_ 开头的那串（只显示一次）');
+    log('');
+    TOKEN = await ask('  粘贴 Token 后回车: ');
+  } else {
+    log('');
+    log('[2/6] 使用环境变量中的 Token');
+  }
   if (!TOKEN) {
     log('没输入，退出。');
     process.exit(1);
