@@ -1245,8 +1245,35 @@ async function testConn() {
  * 检查更新（从 GitHub 拉 version.json）
  * ============================================================ */
 const UPDATE_JSON = 'https://raw.githubusercontent.com/moyunql/browser-agent/main/version.json';
+const UPDATE_API = 'https://api.github.com/repos/moyunql/browser-agent/contents/version.json';
 const UPDATE_ZIP = 'https://github.com/moyunql/browser-agent/archive/refs/heads/main.zip';
 const UPDATE_PAGE = 'https://github.com/moyunql/browser-agent';
+
+/** raw 被墙时退回 GitHub Contents API（这两个域名分流规则常常不同） */
+async function fetchUpdateInfo() {
+  try {
+    const r1 = await rpc('llm.fetch', {
+      url: UPDATE_JSON + '?t=' + Date.now(),
+      method: 'GET',
+      headers: {},
+    });
+    if (r1.ok) return JSON.parse(r1.text);
+  } catch (e) {
+    /* 落到 API */
+  }
+
+  const r2 = await rpc('llm.fetch', {
+    url: UPDATE_API + '?t=' + Date.now(),
+    method: 'GET',
+    headers: { Accept: 'application/vnd.github+json' },
+  });
+  if (!r2.ok) throw new Error('HTTP ' + r2.status + '（两个更新源都不通，可能需要开代理）');
+  const j = JSON.parse(r2.text);
+  const b64 = String(j.content || '').replace(/\s/g, '');
+  if (!b64) throw new Error('接口未返回文件内容');
+  const bytes = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+  return JSON.parse(new TextDecoder('utf-8').decode(bytes));
+}
 
 function cmpVersion(a, b) {
   const pa = String(a || '').split('.').map((x) => parseInt(x, 10) || 0);
@@ -1270,13 +1297,7 @@ async function checkUpdate() {
   el.onclick = null;
 
   try {
-    const res = await rpc('llm.fetch', {
-      url: UPDATE_JSON + '?t=' + Date.now(),
-      method: 'GET',
-      headers: {},
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status + '（GitHub 可能被墙，开代理再试）');
-    const j = JSON.parse(res.text);
+    const j = await fetchUpdateInfo();
     const latest = String(j.version || '').trim();
     if (!latest) throw new Error('version.json 格式不对');
 
