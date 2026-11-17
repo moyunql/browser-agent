@@ -835,6 +835,21 @@ function updateButtons() {
  * ============================================================ */
 async function runAgent(userText) {
   if (running) return;
+
+  // 配置不全就别发请求了 —— 否则只会拿到一句看不懂的 401
+  const baseOk = !!(cfg.base || '').trim();
+  const keyOk = !!(cfg.key || '').trim();
+  if (!baseOk || !keyOk) {
+    const miss = !baseOk && !keyOk ? '接口地址和 API Key' : !baseOk ? '接口地址' : 'API Key';
+    addMsg('error', '还没配置 ' + miss + ' —— 在 ⚙ 里填好（输入即生效，不用点保存），然后重新发送。');
+    $('#cfgPanel').classList.remove('hidden');
+    fillCfgForm();
+    renderCfgStatus();
+    const target = !baseOk ? $('#cfgBase') : $('#cfgKey');
+    if (target) target.focus();
+    return;
+  }
+
   running = true;
   aborted = false;
   stepCount = 0;
@@ -1054,6 +1069,7 @@ function fillCfgForm() {
   updatePromptLen();
   updateExtraLen();
   renderSkillList();
+  renderCfgStatus();
 }
 
 function updatePromptLen() {
@@ -1108,7 +1124,8 @@ function effectiveSystemPrompt() {
   return extra ? base + '\n\n' + extra : base;
 }
 
-function saveCfg() {
+/** 把表单当前值同步进内存 cfg —— 不等保存，改完立刻生效 */
+function syncCfgFromForm() {
   cfg = {
     base: $('#cfgBase').value.trim() || DEFAULT_CFG.base,
     model: $('#cfgModel').value.trim() || DEFAULT_CFG.model,
@@ -1117,17 +1134,82 @@ function saveCfg() {
     systemPrompt: $('#cfgSysPrompt').value,
     extraPrompt: $('#cfgExtraPrompt').value,
   };
+}
+
+/** 写盘 */
+function persistCfg(silent) {
   chrome.storage.local.set({ cfg }, () => {
-    const custom = String(cfg.systemPrompt || '').trim();
-    const extra = String(cfg.extraPrompt || '').trim();
-    let msg = custom ? '已保存 · 自定义提示词 ' + custom.length + ' 字' : '已保存 · 内置默认提示词';
-    if (extra) msg += ' + 额外 ' + extra.length + ' 字';
-    hint(msg, 'ok');
+    renderCfgStatus();
+    if (silent) {
+      hint('已自动保存', 'ok');
+    } else {
+      const custom = String(cfg.systemPrompt || '').trim();
+      const extra = String(cfg.extraPrompt || '').trim();
+      let msg = custom ? '已保存 · 自定义提示词 ' + custom.length + ' 字' : '已保存 · 内置默认提示词';
+      if (extra) msg += ' + 额外 ' + extra.length + ' 字';
+      hint(msg, 'ok');
+    }
     // 已在进行中的会话也立即换成新提示词
     if (messages.length && messages[0] && messages[0].role === 'system') {
       messages[0].content = effectiveSystemPrompt();
     }
   });
+}
+
+function saveCfg(silent) {
+  syncCfgFromForm();
+  persistCfg(silent);
+}
+
+let autoSaveTimer = null;
+
+/** 输入即生效：内存立即同步，写盘防抖 700ms */
+function scheduleAutoSave() {
+  syncCfgFromForm();
+  renderCfgStatus();
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    autoSaveTimer = null;
+    persistCfg(true);
+  }, 700);
+}
+
+/** 顶部状态条：一眼看出配没配好 */
+function renderCfgStatus() {
+  const el = $('#cfgStatus');
+  if (!el) return;
+
+  const baseEl = $('#cfgBase');
+  const keyEl = $('#cfgKey');
+  const modelEl = $('#cfgModel');
+  const base = (baseEl ? baseEl.value : cfg.base || '').trim();
+  const model = (modelEl ? modelEl.value : cfg.model || '').trim();
+  const key = (keyEl ? keyEl.value : cfg.key || '').trim();
+
+  const hasBase = !!base;
+  const hasKey = !!key;
+  let cls = 'ok';
+  let msg = '已就绪';
+
+  if (!hasBase && !hasKey) {
+    cls = 'err';
+    msg = '缺接口地址和 API Key，填完才能用';
+  } else if (!hasBase) {
+    cls = 'err';
+    msg = '缺接口地址';
+  } else if (!hasKey) {
+    cls = 'err';
+    msg = '缺 API Key';
+  }
+
+  const shortBase = base.replace(/^https?:\/\//, '').replace(/\/+$/, '').slice(0, 40);
+  el.className = 'cfg-status ' + cls;
+  el.innerHTML =
+    '<span class="st-dot"></span>' +
+    '<span>' + escapeHtml(msg) + '</span>' +
+    (hasBase ? '<span class="st-k">·</span><code>' + escapeHtml(shortBase) + '</code>' : '') +
+    (model ? '<code>' + escapeHtml(model.slice(0, 24)) + '</code>' : '') +
+    (hasKey ? '<span class="st-k">· Key ✓</span>' : '');
 }
 
 function hint(text, cls) {
@@ -1160,9 +1242,78 @@ async function testConn() {
 }
 
 /* ============================================================
+ * 检查更新（从 GitHub 拉 version.json）
+ * ============================================================ */
+const UPDATE_JSON = 'https://raw.githubusercontent.com/moyunql/browser-agent/main/version.json';
+const UPDATE_ZIP = 'https://github.com/moyunql/browser-agent/archive/refs/heads/main.zip';
+const UPDATE_PAGE = 'https://github.com/moyunql/browser-agent';
+
+function cmpVersion(a, b) {
+  const pa = String(a || '').split('.').map((x) => parseInt(x, 10) || 0);
+  const pb = String(b || '').split('.').map((x) => parseInt(x, 10) || 0);
+  const n = Math.max(pa.length, pb.length);
+  for (let i = 0; i < n; i++) {
+    const x = pa[i] || 0;
+    const y = pb[i] || 0;
+    if (x > y) return 1;
+    if (x < y) return -1;
+  }
+  return 0;
+}
+
+async function checkUpdate() {
+  const cur = chrome.runtime.getManifest().version;
+  const el = $('#updateHint');
+  if (!el) return;
+  el.textContent = '检查中…';
+  el.style.cursor = 'default';
+  el.onclick = null;
+
+  try {
+    const res = await rpc('llm.fetch', {
+      url: UPDATE_JSON + '?t=' + Date.now(),
+      method: 'GET',
+      headers: {},
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status + '（GitHub 可能被墙，开代理再试）');
+    const j = JSON.parse(res.text);
+    const latest = String(j.version || '').trim();
+    if (!latest) throw new Error('version.json 格式不对');
+
+    if (cmpVersion(latest, cur) > 0) {
+      el.textContent = '发现 v' + latest + ' · 点击下载 →';
+      el.className = 'hint-inline upd';
+      el.style.cursor = 'pointer';
+      el.onclick = () => chrome.tabs.create({ url: j.download || UPDATE_ZIP });
+      const notes = Array.isArray(j.notes) ? j.notes.filter(Boolean).slice(0, 5) : [];
+      addMsg(
+        'sys',
+        '发现新版本 v' + latest + '（当前 v' + cur + '）' + (notes.length ? '：' + notes.join('；') : '') +
+          ' —— 下载解压后，在扩展管理页点 ⟳ 重新加载即可。'
+      );
+    } else {
+      el.textContent = '已是最新 v' + cur;
+      el.className = 'hint-inline';
+    }
+  } catch (e) {
+    el.textContent = '检查失败：' + (e.message || e);
+    el.className = 'hint-inline err';
+  }
+}
+
+
+/* ============================================================
  * 事件绑定
  * ============================================================ */
 function bind() {
+  /* ---- 配置项：输入即生效 + 防抖自动保存 ---- */
+  ['cfgBase', 'cfgModel', 'cfgKey', 'cfgSteps'].forEach((id) => {
+    const el = $('#' + id);
+    if (!el) return;
+    el.addEventListener('input', scheduleAutoSave);
+    el.addEventListener('change', scheduleAutoSave);
+  });
+
   $('#btnSend').onclick = () => {
     const t = $('#input').value.trim();
     if (!t || running) return;
@@ -1244,10 +1395,21 @@ function bind() {
     updatePromptLen();
     hint('已清空，将使用内置默认提示词', 'ok');
   };
-  $('#cfgSysPrompt').addEventListener('input', updatePromptLen);
+  $('#cfgSysPrompt').addEventListener('input', () => {
+    updatePromptLen();
+    scheduleAutoSave();
+  });
 
   /* ---- 额外提示词 / 技能多选插入 ---- */
-  $('#cfgExtraPrompt').addEventListener('input', updateExtraLen);
+  $('#cfgExtraPrompt').addEventListener('input', () => {
+    updateExtraLen();
+    scheduleAutoSave();
+  });
+
+  $('#btnCheckUpdate').onclick = (e) => {
+    e.preventDefault();
+    checkUpdate();
+  };
 
   $('#skillList').addEventListener('change', updateSkillSelectionState);
 

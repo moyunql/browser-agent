@@ -6,7 +6,7 @@ import path from 'node:path';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
 const PANEL = path.join(HERE, '..', 'browser-agent', 'panel.html');
-const PORT = '9337';
+const PORT = process.env.CDP_PORT || '9337';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const MOCK = `
@@ -119,6 +119,8 @@ check('tasks 初始为空', (await ev('tasks.length')) === 0);
 check('空态提示可见', /还没有任务记录/.test(await ev('document.querySelector("#taskList").textContent')));
 
 console.log('\n=== 2. 跑一个任务，自动进入列表 ===');
+// v1.6.0 起 runAgent 会先校验配置，测试里直接给内存 cfg 塞一份
+await ev('cfg.base = "https://api.test.com/v1"; cfg.key = "sk-test"; "ok"');
 await ev('runAgent("试试登录框")');
 for (let i = 0; i < 25; i++) {
   await sleep(300);

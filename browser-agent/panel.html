@@ -36,9 +36,10 @@
     </div>
 
     <section id="cfgPanel" class="cfg hidden">
+      <div id="cfgStatus" class="cfg-status"></div>
       <label>接口地址<input id="cfgBase" placeholder="http://127.0.0.1:8080/v1" /></label>
       <label>模型<input id="cfgModel" placeholder="deepseek-v4.1-flash" /></label>
-      <label>API Key<input id="cfgKey" type="password" /></label>
+      <label>API Key<input id="cfgKey" type="password" placeholder="粘贴你的 API Key" /></label>
       <label>最大步数（0=不限）<input id="cfgSteps" type="number" min="0" max="999" title="0 或留空 = 不限制，由 300 步安全阀兜底" /></label>
 
       <label class="lbl-col">
@@ -68,6 +69,10 @@
         <button id="btnSaveCfg" class="primary">保存</button>
         <button id="btnTestCfg">测试连接</button>
         <button id="btnClearChat">清空对话</button>
+      </div>
+      <div class="cfg-row mini">
+        <button id="btnCheckUpdate" type="button">检查更新</button>
+        <span id="updateHint" class="hint-inline"></span>
       </div>
       <div id="cfgHint" class="hint"></div>
     </section>

@@ -1,0 +1,13 @@
+{
+  "version": "1.6.0",
+  "date": "2026-11-17",
+  "notes": [
+    "配置改为输入即生效，不用再点保存",
+    "设置页顶部新增配置状态条，缺地址或 Key 直接标红",
+    "发送前校验配置，缺 Key 不再静默返回 401",
+    "新增「检查更新」，从 GitHub 拉取版本信息"
+  ],
+  "download": "https://github.com/moyunql/browser-agent/archive/refs/heads/main.zip",
+  "page": "https://github.com/moyunql/browser-agent",
+  "minChrome": "100"
+}

@@ -227,7 +227,7 @@ button.icon { padding: 4px 7px; line-height: 1; font-size: 13px; }
   flex-direction: column;
   gap: 7px;
   flex: 0 0 auto;
-  max-height: 64vh;
+  max-height: 58vh;
   overflow-y: auto;
 }
 /* 同 .log 的坑：带 overflow:hidden 的 flex 子项（.skill-box）min-height 会退化为 0，
@@ -617,6 +617,53 @@ button.icon { padding: 4px 7px; line-height: 1; font-size: 13px; }
   max-height: 140px;
 }
 #input:focus { border-color: #9fbcf5; background: #fff; }
+/* 配置状态条：常驻显示当前生效的地址/模型/Key 状态 */
+.cfg-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: #f4f6f9;
+  border: 1px solid var(--line-soft);
+  color: var(--txt-2);
+  flex-wrap: wrap;
+}
+.cfg-status .st-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--txt-3);
+}
+.cfg-status.ok {
+  background: #eaf7f0;
+  border-color: #cfeadd;
+  color: #0e7a46;
+}
+.cfg-status.ok .st-dot { background: var(--ok); }
+.cfg-status.warn {
+  background: #fff7e8;
+  border-color: #f5e2be;
+  color: #96610a;
+}
+.cfg-status.warn .st-dot { background: var(--warn); }
+.cfg-status.err {
+  background: #fdeced;
+  border-color: #f5cdd0;
+  color: #b91c1c;
+}
+.cfg-status.err .st-dot { background: var(--err); }
+.cfg-status .st-k { color: var(--txt-3); }
+.cfg-status code {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: rgba(0, 0, 0, .04);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
 .ftr-row {
   display: flex;
   align-items: center;
